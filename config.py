@@ -1,4 +1,4 @@
-title = "Simple WebApp"
+title = "WebApp"
 data = {
     "Revenue": [
         129047, 23121, 17001, 99811, 161777,
