@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime as dt
+from datetime import datetime, timezone
 from config import *
-from erase_excl import *
+from utils import *
 from s3_utils import get_s3_object, save_to_s3
 
 def create_sidebar(text="This is a sample app"):
@@ -30,6 +30,12 @@ def process_sa(df):
     return report
 
 def create_layout():
+
+    # Initialize User Session
+    if 'upload_time' not in st.session_state:
+        st.session_state.upload_time = None
+
+
     # Create headline
     st.title(title)
     
@@ -51,7 +57,7 @@ def create_layout():
         # File Processing and Metadata
         try:
             report = process_sa(df)
-            latest_upload = dt.now().strftime("%A") + ", " + dt.now().strftime("%H:%M")
+            latest_upload = datetime.now().strftime("%A") + ", " + datetime.now().strftime("%H:%M")
             st.success(f"Last file uploaded: {latest_upload}")
 
             st.divider()
@@ -72,14 +78,15 @@ def create_layout():
             # SA Upload Button
             try:
                 if st.button("Upload & Get Offers"):
-                    success = save_to_s3(df, BUCKET, SA_OUTPUTS_KEY)
+                    success = save_to_s3(df, BUCKET, SA_OUTPUTS_KEY, format="xlsx")
                     if success:
                         st.success("✅ Upload Sucsessful.")
+                        st.session_state.upload_time = datetime.now(timezone.utc)
                     else:
-                        st.error("❌ Upload failed")
+                        st.error("❌ Upload Failed.")
             except Exception as e:
                 st.error(f"Section Error: {e}")
-
+            """
             # DP Erase Button
             try:
                 if st.button("Erase Excluded DPs"):
@@ -90,29 +97,31 @@ def create_layout():
                         st.error("❌ Failed Erasing DP Exclusions")
             except Exception as e:
                 st.error(f"Section Error: {e}")
-        
+            """
         with col2:
-            # Offers Download Button
             try:
-                # 1) Pull the latest DataFrame from S3
-                latest_df = get_s3_object(BUCKET, OUTPUT_KEY)
-                if latest_df is None or latest_df.empty:
-                    st.info("No optimized offers available yet.")
-                else:
-                    # 2) Convert to CSV bytes
-                    csv_bytes = latest_df.to_csv(index=False).encode("utf-8")
+                if "upload_time" not in st.session_state:
+                    st.session_state.upload_time = None
+                if st.button("Download Optimized Offers"):
+                    # 3) On click, check readiness
+                    if not check_for_new_offers(st.session_state.upload_time):
+                        st.info("🔄 Offers are still being computed.")
+                    else:
+                        latest_df = get_s3_object(BUCKET, OUTPUT_KEY)
+                        if latest_df is None or latest_df.empty:
+                            st.error("❌ No optimized offers available.")
+                        else:
+                            csv_bytes = latest_df.to_csv(index=False).encode("utf-8")
+                            ts = datetime.now(timezone.utc).strftime("%d-%m-%Y_%H-%M-%S")
+                            filename = f"optimized_offers_{ts}.csv"
 
-                    # 3) Show the download button and capture click state
-                    clicked = st.download_button(
-                        label="Download Optimized Offers",
-                        data=csv_bytes,
-                        file_name="optimized_offers.csv",
-                        mime="text/csv"
-                    )
+                            st.download_button(
+                                label="Click here to save the file",
+                                data=csv_bytes,
+                                file_name=filename,
+                                mime="text/csv"
+                            )
 
-                    # 4) Only after click, show success
-                    if clicked:
-                        st.success("✅ File download comlete!")
             except Exception as e:
                 st.error(f"❌ Error fetching or preparing download: {e}")
 

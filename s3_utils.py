@@ -40,21 +40,45 @@ def list_s3_objects(bucket, prefix):
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     return response.get('Contents', [])
 
-def save_to_s3(df, bucket, key):
-    """Save DataFrame to S3 as CSV"""
-    import io
-    # Use StringIO to capture CSV text
-    buffer = io.StringIO()
-    df.to_csv(buffer, index=False)
-    # Encode the text to bytes
-    encoded_data = buffer.getvalue().encode('utf-8')
-    
-    response = s3_client.put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=encoded_data,
-        ContentType='text/csv'
-    )
+def list_s3_objects(bucket, prefix):
+    """List objects in S3 bucket with given prefix and return the latest updated time in datetime"""
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+    contents = response.get('Contents', [])
+    if not contents:
+        return None
+    latest = max(obj['LastModified'] for obj in contents)
+    return latest
+
+def save_to_s3(df, bucket, key, format="xlsx"):
+    try:
+        if format == "csv":
+            buffer = io.StringIO()
+            df.to_csv(buffer, index=False)
+            body = buffer.getvalue().encode('utf-8')
+            content_type = "text/csv"
+
+        elif format == "xlsx":
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False)
+            buffer.seek(0)
+            body = buffer.read()
+            content_type = (
+                "application/vnd.openxmlformats-"
+                "officedocument.spreadsheetml.sheet"
+            )
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+        response = s3_client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=body,
+            ContentType=content_type
+        )
+    except ClientError as e:
+        print(e)
+
 
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
         print(f"Successfully saved CSV to {key}")
@@ -71,5 +95,5 @@ def object_exists(bucket, key):
         error_code = e.response.get("Error", {}).get("Code", "")
         if error_code == "404" or error_code == "NoSuchKey":
             return False
-        # re-raise unexpected errors
+
         raise
