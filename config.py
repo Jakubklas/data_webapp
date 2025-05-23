@@ -1,6 +1,10 @@
+import pytz
+from datetime import timezone, timedelta
+
 title = "Exclusive Offer Allocation"
 
 latest_upload = None
+local_timezone = timezone(timedelta(hours=1))
 
 sa_columns = [
     "OFD Date",
@@ -12,7 +16,7 @@ sa_columns = [
 ]
 
 excl_columns = [
-    "providerId",
+    "provider_id",
     "num_targeted",
     "last_saved_year",
     "last_saved_week"

@@ -1,35 +1,13 @@
 import streamlit as st
 import pandas as pd
+from io import StringIO, BytesIO
 from datetime import datetime, timezone
 from config import *
 from utils import *
 from s3_utils import get_s3_object, save_to_s3
 
-def create_sidebar(text="This is a sample app"):
-    with st.sidebar:
-        st.header(text)
-        st.link_button(label = "Upload EOA", url = "https://midway-auth.amazon.com/login")
-        st.link_button(label = "Settings", url = "https://midway-auth.amazon.com/login")
-        st.link_button(label = "Other", url = "https://midway-auth.amazon.com/login")
 
-def process_sa(df):
-    report = {}
-
-    # Verify Columns
-    for col in df.columns:
-        if col not in sa_columns:
-            report["column_check"] = False
-        else:
-            report["column_check"] = True
-
-    # Count offers, stations, durations
-    report["offers"] = df.shape[0]
-    report["stations"] = df["Station"].nunique()
-    report["avg_duration"] = df["Duration"].mean()
-
-    return report
-
-def create_layout():
+def EOA_Upload_Page():
 
     # Initialize User Session
     if 'upload_time' not in st.session_state:
@@ -69,6 +47,7 @@ def create_layout():
             st.dataframe(report_df)
         except Exception as e:
             st.error(f"Error processing file: {e}")
+            st.stop()
 
         # Buttons Section
         st.divider()
@@ -86,28 +65,19 @@ def create_layout():
                         st.error("❌ Upload Failed.")
             except Exception as e:
                 st.error(f"Section Error: {e}")
-            """
-            # DP Erase Button
-            try:
-                if st.button("Erase Excluded DPs"):
-                    success = erase_excluded_dps()
-                    if success:
-                        st.success("✅ DP Exclusions Erased.")
-                    else:
-                        st.error("❌ Failed Erasing DP Exclusions")
-            except Exception as e:
-                st.error(f"Section Error: {e}")
-            """
+
         with col2:
             try:
                 if "upload_time" not in st.session_state:
                     st.session_state.upload_time = None
-                if st.button("Download Optimized Offers"):
+                if st.button("Check for new offers"):
                     # 3) On click, check readiness
-                    if not check_for_new_offers(st.session_state.upload_time):
-                        st.info("🔄 Offers are still being computed.")
+                    status, latest = check_for_new_offers(st.session_state.upload_time)
+                    if not status:
+                        st.info(f"🔄 Latest optimized offers from {latest.strftime('%Y-%m-%d %H:%M:%S')}.")
                     else:
                         latest_df = get_s3_object(BUCKET, OUTPUT_KEY)
+                        
                         if latest_df is None or latest_df.empty:
                             st.error("❌ No optimized offers available.")
                         else:
@@ -115,19 +85,113 @@ def create_layout():
                             ts = datetime.now(timezone.utc).strftime("%d-%m-%Y_%H-%M-%S")
                             filename = f"optimized_offers_{ts}.csv"
 
-                            st.download_button(
-                                label="Click here to save the file",
-                                data=csv_bytes,
-                                file_name=filename,
-                                mime="text/csv"
-                            )
+                            st.info(f"🔄 Latest Offers available from: {latest}")
+                            if st.download_button(
+                                    label="Download Optimized Offers",
+                                    data=csv_bytes,
+                                    file_name=filename,
+                                    mime="text/csv"
+                                ):
+                                st.success("✅ Download Successful..")
 
             except Exception as e:
                 st.error(f"❌ Error fetching or preparing download: {e}")
 
 
-    
+def Settings_Page():
+    st.title("Settings")
 
-             # TODO: When a new SA file is uploaded, mark the time and only serve the new file once the optimized offers file's last_update_time is grearted than the marked upload file
-             # TODO: Provide updates about offer processing in real-time
-             # TODO: Add last_update_time to the optimized offers csv name.  
+    st.header("Targeting Configuration", divider="gray")
+    st.write("Configure the way Exclusive offers are sent to DPs")
+
+    col1, col2 = st.columns([1,1])
+
+    with col1:
+        OFFERS_PER_DP = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=3)
+        WEEKLY_DP_TARGETS = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=2)
+        RISK_THRESHOLD = st.number_input("Minimum risk threshold", min_value=1, max_value=4, value=2)
+        CHUNKS = st.number_input("Offer Processing Chunks", min_value=50, max_value=300, value=100)
+
+    with col2:
+        st.write(" ")
+        st.write(" ")
+        st.write(" ")
+        st.write(" ")
+        st.write(" ")
+        st.write(" ")
+        st.write(
+        f"""
+        Exclusive Offers will target each DP <b>maximum {WEEKLY_DP_TARGETS}</b> times per week
+        with  <b>maximum {OFFERS_PER_DP} offers</b> sent to each DP. DPs with <b>more than {RISK_THRESHOLD}</b>
+        probability of disengaging will be considered "at risk" and will be targetd with priority.
+        Offers will be <b>processed in chunks of {CHUNKS}</b> for more efficient processing.
+        """,
+        unsafe_allow_html=True
+        )
+
+    st.write(" ")
+    st.header("Exclusions", divider="gray")
+
+    uploaded_file = st.file_uploader(
+        label = "Exclude specific DPs or Stations from EOA targeting.",
+        type=["csv"],
+        accept_multiple_files=False
+        )
+
+    buffer = StringIO()
+    empty_df = pd.DataFrame(columns=["provider_id", "station"])
+    empty_df.to_csv(buffer, index=False)
+    buffer.seek(0)
+
+    col1, col2 = st.columns([1,1])
+    with col1:
+        st.download_button(
+            label="Download CSV template",
+            file_name=f"EOA_Exclusions_{datetime.now().strftime('%d_%m_%Y')}.csv",
+            data=buffer.getvalue(),
+            mime="text/csv"
+        )
+    with col2:
+        st.download_button(
+            label="Download Current Exclusions",
+            file_name=f"EOA_Exclusions_{datetime.now().strftime('%d_%m_%Y')}.csv",
+            data= get_s3_object(BUCKET, EXCLUSION_KEY).to_csv(index=False).encode("utf-8"),
+            mime="text/csv"
+        )
+
+    if "confirm_wipe" not in st.session_state:
+        st.session_state.confirm_wipe = False
+
+    with col1:
+        if st.button("Wipe this week’s exclusions"):
+            st.session_state.confirm_wipe = True
+
+        if st.session_state.confirm_wipe:
+            st.info("⚠️ Are you sure? This will erase the offers memory for this week, causing us to target some DPs more times than the current configured maximum.")
+            yes, no = st.columns(2)
+
+            with yes:
+                if st.button("Yes, wipe"):
+                    # Perform the action
+                    save_to_s3(pd.DataFrame(columns=excl_columns),
+                            BUCKET, EXCLUSION_KEY, format="csv")
+                    st.success("✅ DP Exclusions Erased.")
+                    # Turn off confirm mode
+                    st.session_state.confirm_wipe = False
+
+            with no:
+                if st.button("No, cancel"):
+                    # Just exit confirm mode
+                    st.session_state.confirm_wipe = False
+    """
+    # DP Erase Button
+    try:
+        if st.button("Erase Excluded DPs"):
+            success = erase_excluded_dps()
+            if success:
+                st.success("✅ DP Exclusions Erased.")
+            else:
+                st.error("❌ Failed Erasing DP Exclusions")
+    except Exception as e:
+        st.error(f"Section Error: {e}")
+    """

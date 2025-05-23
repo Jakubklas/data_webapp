@@ -36,11 +36,6 @@ def get_s3_object(bucket, prefix):
         raise
 
 def list_s3_objects(bucket, prefix):
-    """List objects in S3 bucket with given prefix"""
-    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-    return response.get('Contents', [])
-
-def list_s3_objects(bucket, prefix):
     """List objects in S3 bucket with given prefix and return the latest updated time in datetime"""
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     contents = response.get('Contents', [])
@@ -49,7 +44,7 @@ def list_s3_objects(bucket, prefix):
     latest = max(obj['LastModified'] for obj in contents)
     return latest
 
-def save_to_s3(df, bucket, key, format="xlsx"):
+def save_to_s3(df, bucket, key, format):
     try:
         if format == "csv":
             buffer = io.StringIO()
