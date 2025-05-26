@@ -10,20 +10,20 @@ def main():
     
     # -----------PAGE SETUP---------------
 
-    with st.sidebar:
-        st.header("Menu")
-
     pages = {
         "UTILITIES": [
-            st.Page("views/other/maestro_script.py",        title="Maestro Script",    icon="🗓️")
+            st.Page("views/other/maestro_script.py",        title="Maestro Script")
         ],
         "SCHEDULING": [
-            st.Page("views/scheduling/tool_1.py",        title="Scheduling Inputs",    icon="🗓️"),
-            st.Page("views/scheduling/tool_2.py",      title="Wave Planning",        icon="⚙️")
+            st.Page("views/scheduling/tool_1.py",        title="Scheduling Inputs"),
+            st.Page("views/scheduling/tool_2.py",      title="Wave Planning"),
+            st.Page("views/scheduling/tool_3.py",        title="SPR Planning"),
+            st.Page("views/scheduling/tool_4.py",        title="Schedule Ahead"),
+            st.Page("views/scheduling/tool_5.py",        title="UTR Buffers"),
         ],
         "EXCLUSIVE OFFERS": [
-            st.Page("views/eoa/eoa_upload.py",   title="Offer Upload",     icon="📥"),
-            st.Page("views/eoa/eoa_settings.py", title="Configuration",  icon="⚙️")
+            st.Page("views/eoa/eoa_upload.py",   title="Offer Upload"),
+            st.Page("views/eoa/eoa_settings.py", title="Configuration")
         ]
     }
 
