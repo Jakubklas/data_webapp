@@ -1,7 +1,8 @@
 import pytz
 from datetime import timezone, timedelta
 
-title = "Exclusive Offer Allocation"
+title = "Flex Scheduling Central"
+page_icon = r"C:\Users\jklas\Downloads\icon.ico"
 
 latest_upload = None
 local_timezone = timezone(timedelta(hours=1))
