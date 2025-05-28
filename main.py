@@ -1,13 +1,14 @@
 import streamlit as st
 from config import *
-from css    import *
+from misc.css import *
+
 def main():
     # Set page configuration
     st.set_page_config(
         page_title=title,
         page_icon = page_icon
         )
-    
+
     # -----------PAGE SETUP---------------
 
     pages = {
@@ -15,7 +16,7 @@ def main():
             st.Page("views/other/maestro_script.py",        title="Maestro Script")
         ],
         "SCHEDULING": [
-            st.Page("views/scheduling/tool_1.py",        title="Scheduling Inputs"),
+            st.Page("views/scheduling/inputs.py",        title="Scheduling Inputs"),
             st.Page("views/scheduling/tool_2.py",      title="Wave Planning"),
             st.Page("views/scheduling/tool_3.py",        title="SPR Planning"),
             st.Page("views/scheduling/tool_4.py",        title="Schedule Ahead"),
