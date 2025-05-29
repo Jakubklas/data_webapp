@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import timezone
-from config import *
-from s3_utils import save_to_s3, list_s3_objects
+from src.config import *
+from src.s3_utils import save_to_s3, list_s3_objects
 
 def process_sa(df):
     report = {}

@@ -3,9 +3,9 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import boto3
 import os
-from misc.logging import log_msg
-from config import *
-from s3_utils import get_s3_object
+from src.utils.logging import log_msg
+from src.config import *
+from src.s3_utils import get_s3_object
 
 class InputsProcessor():
     def __init__(self, bucket, local_files):

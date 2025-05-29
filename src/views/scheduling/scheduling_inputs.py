@@ -1,7 +1,7 @@
 import streamlit as st
-from utils.inputs_processing import InputsProcessor
-from s3_utils import get_s3_object
-from config import *
+from src.services.inputs_processing import InputsProcessor
+from src.s3_utils import get_s3_object
+from src.config import *
 
 def Scheduling_Inputs():
     st.title("Scheduling Inputs")
@@ -16,7 +16,7 @@ def Scheduling_Inputs():
         processor = InputsProcessor(scheduling_bucket, local_files)
         try:
             # Sync all the new data
-            # processor.sync()
+            processor.sync()
             # Process and combine into one file
             st.session_state.inputs= processor\
                 .process_snop() \

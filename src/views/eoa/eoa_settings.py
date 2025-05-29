@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 from io import StringIO
 from datetime import datetime
-from config import *
-from utils import *
-from s3_utils import get_s3_object, save_to_s3
+from src.config import *
+from src.utils.utils import *
+from src.s3_utils import get_s3_object, save_to_s3
 
 
 def Settings_Page():
