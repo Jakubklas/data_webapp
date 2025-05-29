@@ -72,7 +72,12 @@ local_files = [
     r"\\ant\dept-eu\Amazon-Flex-Europe\EU-OE\LPnS\ETL\UK_AMZL_CO_Volume_Forecast.txt",                                   # CO 48H Forecast ND
     r"\\ant\dept-eu\EUCentralOPS\Volume-Management\Control Tower\Forecast\EU_SameDay\logs\SD_forecaster_daily_logs.csv"  # CO 48H Forecast SD
 ] 
-
+locked_inputs = [
+        "week", "day", "ofd_date", "station", "cycle", "sa%_eoa", "sa%_week", "sa%_d3", "sa%_d3", "sa%_d2", "sa%_d1", "sa%_d0"
+    ]
+pinned_inputs = [
+        "week", "day", "ofd_date", "station", "cycle"
+    ]
 
 """
 AWS VARIABLES

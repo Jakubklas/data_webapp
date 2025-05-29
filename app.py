@@ -3,12 +3,15 @@ from src.config import *
 from src.utils.css import *
 
 def main():
+    
     # Set page configuration
     st.set_page_config(
         page_title=title,
-        page_icon = page_icon
+        page_icon = page_icon,
+        layout="wide"
         )
-
+    
+    st.markdown(wide_page, unsafe_allow_html=True)
     # -----------PAGE SETUP---------------
 
     pages = {

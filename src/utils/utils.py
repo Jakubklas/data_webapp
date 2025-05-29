@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 from datetime import timezone
 from src.config import *
@@ -48,3 +49,45 @@ def check_for_new_offers(upload_time):
     except Exception as e:
         print(f"Error getting the newest S3 file: {e}")
         return False, None
+    
+
+def separate_text_input(text, item_length=None):
+    try:
+        if len(text) == item_length:
+            separator = None
+        elif "," in text:
+            separator = ","
+        elif ", " in text:
+            separator = ", "
+        elif " " in text:
+            separator = " "
+        elif "\n" in text:
+            separator = "\n"
+        elif "\t" in text:
+            separator = "\t"
+
+        result = text.split(sep=separator)
+        outliers = [item for item in result if len(item) != item_length]
+
+        if len(outliers) != 0:
+            st.error(f"Items not found: {outliers}")
+
+        return result
+    except Exception as e:
+        st.error(f"Unexpected text format. Separate values by commas, spaces, new-lines, or tabs. \n {e}")
+
+@st.dialog("⚠️ Please confirm", width="small")
+def confirm_dialog(session_variable, message, yes, no):
+    st.write(message)
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(yes):
+            session_variable = True
+            return session_variable
+            st.rerun()
+    with c2:
+        if st.button(no):
+            session_variable = False
+            st.stop()
+            return session_variable
+            
