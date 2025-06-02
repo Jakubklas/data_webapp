@@ -4,7 +4,7 @@ from datetime import datetime
 
 # ─── LOGGER CONFIGURATION ──────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()  # emits to stderr (your terminal)
+handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     "%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%H:%M:%S"

@@ -1,16 +1,20 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timezone
+import time
 from src.config import *
 from src.utils.utils import *
 from src.s3_utils import get_s3_object, save_to_s3
+from src.services.eoa_lambda import invoke_offer_prioritization
 
 def EOA_Upload_Page():
 
     # Initialize User Session
     if 'upload_time' not in st.session_state:
         st.session_state.upload_time = None
-
+    st.session_state["CHUNKS"] = 150
+    st.session_state["OFFERS_PER_DP"] = 3
+    st.session_state["WEEKLY_DP_TARGETS"] = 2
 
     # Create headline
     st.title("Exclusive Offer Allocation")
@@ -49,51 +53,56 @@ def EOA_Upload_Page():
 
         # Buttons Section
         st.divider()
-        col1, col2 = st.columns([1, 1])
+        col1, col2, _= st.columns(3)
 
         with col1:
             # SA Upload Button
             try:
-                if st.button("Upload & Get Offers"):
-                    success = save_to_s3(df, BUCKET, SA_OUTPUTS_KEY, format="xlsx")
-                    if success:
-                        st.success("✅ Upload Sucsessful.")
-                        st.session_state.upload_time = datetime.now(timezone.utc)
-                    else:
-                        st.error("❌ Upload Failed.")
+                if st.button("Upload & Distribute Offers"):
+                    with st.spinner("Uploading...", show_time=True):
+                        success = save_to_s3(df, BUCKET, SA_OUTPUTS_KEY, format="xlsx")
+                        if success:
+                            st.session_state.upload_time = datetime.now(timezone.utc)
+                        else:
+                            st.error("❌ Upload Failed.")
+                            st.stop()
+
+                    # Lambda invocation
+                    with st.spinner(text="Distributing these offers...", show_time=True):
+                        response = invoke_offer_prioritization(
+                                    st.session_state.CHUNKS,
+                                    st.session_state.OFFERS_PER_DP,
+                                    st.session_state.WEEKLY_DP_TARGETS
+                                )
+                        if response["statusCode"] != 200:
+                            st.error("There was a problem whilte dtistributing offers.")
+                            st.stop()
+
+                    # Waiting for offers to be saved
+                    with st.spinner(text="Saving offers...", show_time=True):
+                        while True:
+                            status, latest = check_for_new_offers(st.session_state.upload_time)
+                            if status:
+                                latest_df = get_s3_object(BUCKET, OUTPUT_KEY)
+                                
+                                csv_bytes = latest_df.to_csv(index=False).encode("utf-8")
+                                ts = datetime.now(timezone.utc).strftime("%d-%m-%Y_%H-%M-%S")
+                                filename = f"optimized_offers_{ts}.csv"
+                                break
+                            else:
+                                time.sleep(5)
+
+                    st.info(f"🔄 Latest Offers available from: {latest}")
+                    if st.download_button(
+                            label="Download Optimized Offers",
+                            data=csv_bytes,
+                            file_name=filename,
+                            mime="text/csv"
+                        ):
+                        st.success("✅ Download Successful..")
+
             except Exception as e:
                 st.error(f"Section Error: {e}")
-
-        with col2:
-            try:
-                if "upload_time" not in st.session_state:
-                    st.session_state.upload_time = None
-                if st.button("Check for new offers"):
-                    # 3) On click, check readiness
-                    status, latest = check_for_new_offers(st.session_state.upload_time)
-                    if not status:
-                        st.info(f"🔄 Latest optimized offers from {latest.strftime('%Y-%m-%d %H:%M:%S')}.")
-                    else:
-                        latest_df = get_s3_object(BUCKET, OUTPUT_KEY)
-                        
-                        if latest_df is None or latest_df.empty:
-                            st.error("❌ No optimized offers available.")
-                        else:
-                            csv_bytes = latest_df.to_csv(index=False).encode("utf-8")
-                            ts = datetime.now(timezone.utc).strftime("%d-%m-%Y_%H-%M-%S")
-                            filename = f"optimized_offers_{ts}.csv"
-
-                            st.info(f"🔄 Latest Offers available from: {latest}")
-                            if st.download_button(
-                                    label="Download Optimized Offers",
-                                    data=csv_bytes,
-                                    file_name=filename,
-                                    mime="text/csv"
-                                ):
-                                st.success("✅ Download Successful..")
-
-            except Exception as e:
-                st.error(f"❌ Error fetching or preparing download: {e}")
 
 if __name__ == "__main__":
     EOA_Upload_Page()

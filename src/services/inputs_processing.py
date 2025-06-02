@@ -340,16 +340,20 @@ class InputsProcessor():
                 suffixes=('', '_e')
             )
 
-            # Drop unnecesary cols Sort by Date/Cycle/Station
-            df = df[cols].drop("joinkey", axis=1)
+            # Sort by Date/Cycle/Station
             df = df.sort_values(["ofd_date", "cycle", "station"], ascending=False)
 
             # Only include current Week and next week
             cw = datetime.now().isocalendar().week
             nw = cw + 1
             relevant_weeks = df["week"].isin([cw, nw])
-
             df = df[relevant_weeks]
+
+            # 
+
+
+
+
             self.scheduling_inputs = df.copy()
             return self.scheduling_inputs
                 
