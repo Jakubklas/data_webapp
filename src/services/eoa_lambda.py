@@ -1,7 +1,7 @@
 import boto3
 import json
 from botocore.config import Config
-from src.utils.logging import *
+# from src.utils.logging import *
 
 config = Config(
     connect_timeout=30,
@@ -10,18 +10,20 @@ config = Config(
              'mode': 'adaptive'
              }
 )
+
 lambda_client = boto3.client('lambda', config=config)
 
-@log_msg
-def invoke_offer_prioritization(CHUNKS, OFFERS_PER_DP, WEEKLY_DP_TARGETS):
-    # Create Lambda client
-    
-    # Function name and payload
+# @log_msg
+def invoke_offer_prioritization(chunk_size, offers_per_dp, weekly_dp_targets):
+    """
+    This lambda invokes EOA offer matching to DPs and specifies the chunk size
+    in which they're processed (to memory requirements). 
+    """
     function_name = 'arn:aws:lambda:us-east-1:533267382787:function:offer-prioritization'
     payload = {
-        "CHUNKS": CHUNKS,
-        "OFFERS_PER_DP": OFFERS_PER_DP,
-        "WEEKLY_DP_TARGETS": WEEKLY_DP_TARGETS
+        "chunk_size": chunk_size,
+        "offers_per_dp": offers_per_dp,
+        "weekly_dp_targets": weekly_dp_targets
     }
     
     try:
@@ -41,7 +43,11 @@ def invoke_offer_prioritization(CHUNKS, OFFERS_PER_DP, WEEKLY_DP_TARGETS):
 # Only to test things out...
 if __name__ == "__main__":
     invoke_offer_prioritization(
-        CHUNKS=150,
-        OFFERS_PER_DP=3,
-        WEEKLY_DP_TARGETS=2
+        chunk_size = 150,
+        offers_per_dp = 3,
+        weekly_dp_targets = 2
     )
+
+
+
+# python run src.services.eoa_lambda.py

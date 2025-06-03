@@ -4,7 +4,7 @@ from io import StringIO
 from datetime import datetime
 from src.config import *
 from src.utils.utils import *
-from src.s3_utils import get_s3_object, save_to_s3
+from src.s3_utils import get_s3_object, save_to_s3, object_exists, get_json_config, save_json_config
 
 
 def Settings_Page():
@@ -16,12 +16,31 @@ def Settings_Page():
     col1, col2 = st.columns([1,1])
 
     with col1:
-        OFFERS_PER_DP = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=3)
-        WEEKLY_DP_TARGETS = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=2)
-        RISK_THRESHOLD = st.number_input("Minimum risk threshold", min_value=1, max_value=4, value=2)
-        CHUNKS = st.number_input("Offer Processing Chunks", min_value=50, max_value=300, value=100)
+        if object_exists(BUCKET, EOA_CONFIG):
+            eoa_config = get_json_config(BUCKET, EOA_CONFIG)
+        else:
+            st.error(f"Configuration file '{EOA_CONFIG}' does not exist")
+        
+        OFFERS_PER_DP = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=eoa_config["offers_per_dp"])
+        WEEKLY_DP_TARGETS = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=eoa_config["weekly_dp_targets"])
+        RISK_THRESHOLD = st.number_input("Minimum risk threshold", min_value=0.1, max_value=1.0, value=eoa_config["risk_threshold"])
+        CHUNKS = st.number_input("Offer Processing Chunks", min_value=50, max_value=300, value=eoa_config["chunk_size"])
+
+        if st.button("Save Configuration"):
+            eoa_config = {
+                "offers_per_dp": OFFERS_PER_DP,
+                "weekly_dp_targets": WEEKLY_DP_TARGETS,
+                "risk_threshold": RISK_THRESHOLD,
+                "chunk_size": CHUNKS,
+            }
+            
+            if save_json_config(BUCKET, EOA_CONFIG, eoa_config):
+                st.success("Targeting configuration was saved.")
+            else:
+                st.error("There was a problem saving the new settings.")
 
     with col2:
+        st.write(" ")
         st.write(" ")
         st.write(" ")
         st.write(" ")
@@ -31,7 +50,7 @@ def Settings_Page():
         st.write(
         f"""
         Exclusive Offers will target each DP <b>maximum {WEEKLY_DP_TARGETS}</b> times per week
-        with  <b>maximum {OFFERS_PER_DP} offers</b> sent to each DP. DPs with <b>more than {RISK_THRESHOLD}</b>
+        with  <b>maximum {OFFERS_PER_DP} offers</b> sent to each DP. DPs with <b>more than {int(RISK_THRESHOLD*100)}%</b>
         probability of disengaging will be considered "at risk" and will be targetd with priority.
         Offers will be <b>processed in chunks of {CHUNKS}</b> for more efficient processing.
         """,

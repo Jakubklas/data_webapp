@@ -47,6 +47,7 @@ datetime
 # - SG SnOP Forecasts
 # - MMoT targets
 # Decipher the cycle naming for AU (over-night) and SG
+# Design the method to identify the outlier rows
 # Build the UI for Maestro
 # Build the backend (S3 stored file w/ the latest data)
 

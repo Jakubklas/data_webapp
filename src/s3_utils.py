@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError
 from io import BytesIO, StringIO
 import pandas as pd
 import os
+import json
 
 s3_client = boto3.client("s3")
 
@@ -31,6 +32,8 @@ def get_s3_object(bucket, prefix, header=0, sheet_name=0):
                 return pd.read_excel(BytesIO(data), header=header, sheet_name=sheet_name)  # reads first sheet by default
             elif key.lower().endswith('.txt'):
                 return pd.read_csv(BytesIO(data), sep='\t', encoding='utf-8')
+            elif key.lower().endswith('.json'):
+                return json.loads(data)
         else:
             raise ValueError("No objects found in the prefix")
             
@@ -103,6 +106,33 @@ def object_exists(bucket, key):
             return False
 
         raise
+
+def get_json_config(bucket, config_name):
+    client = boto3.client("s3")
+
+    response = client.get_object(
+        Bucket = bucket, # "uk-eoa-pipeline",
+        Key = config_name #"eoa_config.json"
+    )
+
+    if "Body" in response:
+        return json.loads(response["Body"].read())
+    else:
+        return None
+
+def save_json_config(bucket, key, config):
+    try:
+        s3_client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=json.dumps(config, indent=4)
+        )
+        print(f"Successfully uploaded config to s3://{bucket}/{key}")
+        return True
+        
+    except Exception as e:
+        print(f"Error uploading to S3: {str(e)}")
+        return True
 
 def refresh_inputs():
     client = boto3.client("s3")

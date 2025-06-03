@@ -4,17 +4,22 @@ from datetime import datetime, timezone
 import time
 from src.config import *
 from src.utils.utils import *
-from src.s3_utils import get_s3_object, save_to_s3
+from src.s3_utils import get_s3_object, save_to_s3, get_json_config
 from src.services.eoa_lambda import invoke_offer_prioritization
 
 def EOA_Upload_Page():
 
     # Initialize User Session
-    if 'upload_time' not in st.session_state:
-        st.session_state.upload_time = None
-    st.session_state["CHUNKS"] = 150
-    st.session_state["OFFERS_PER_DP"] = 3
-    st.session_state["WEEKLY_DP_TARGETS"] = 2
+    eoa_config =  get_json_config(BUCKET, EOA_CONFIG)
+    session_vars = {
+        "upload_time": None, 
+        "CHUNKS": eoa_config["chunk_size"], 
+        "OFFERS_PER_DP": eoa_config["offers_per_dp"], 
+        "WEEKLY_DP_TARGETS": eoa_config["weekly_dp_targets"]
+        }
+    for var, val in session_vars.items():
+        if var not in st.session_state:
+            st.session_state[var] = val
 
     # Create headline
     st.title("Exclusive Offer Allocation")
@@ -70,9 +75,9 @@ def EOA_Upload_Page():
                     # Lambda invocation
                     with st.spinner(text="Distributing these offers...", show_time=True):
                         response = invoke_offer_prioritization(
-                                    st.session_state.CHUNKS,
-                                    st.session_state.OFFERS_PER_DP,
-                                    st.session_state.WEEKLY_DP_TARGETS
+                                    chunk_size = st.session_state.CHUNKS,
+                                    offers_per_dp = st.session_state.OFFERS_PER_DP,
+                                    weekly_dp_targets = st.session_state.WEEKLY_DP_TARGETS
                                 )
                         if response["statusCode"] != 200:
                             st.error("There was a problem whilte dtistributing offers.")
