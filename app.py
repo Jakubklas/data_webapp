@@ -1,33 +1,22 @@
 import streamlit as st
-from src.config import *
-from src.utils.css import *
-
+import config as cfg
+import src.utils.css as css
 def main():
     
     # Set page configuration
     st.set_page_config(
-        page_title=title,
-        page_icon = page_icon,
+        page_title=cfg.title,
+        page_icon = cfg.page_icon,
         layout="wide"
         )
     
-    st.markdown(wide_page, unsafe_allow_html=True)
+    st.markdown(css.wide_page, unsafe_allow_html=True)
     # -----------PAGE SETUP---------------
 
     pages = {
-        "UTILITIES": [
-            st.Page("src/views/other/maestro_script.py",        title="Maestro Script")
-        ],
-        "SCHEDULING": [
-            st.Page("src/views/scheduling/scheduling_inputs.py",        title="Scheduling Inputs"),
-            st.Page("src/views/scheduling/tool_2.py",      title="Wave Planning"),
-            st.Page("src/views/scheduling/tool_3.py",        title="SPR Planning"),
-            st.Page("src/views/scheduling/tool_4.py",        title="Schedule Ahead"),
-            st.Page("src/views/scheduling/tool_5.py",        title="UTR Buffers"),
-        ],
         "EXCLUSIVE OFFERS": [
-            st.Page("src/views/eoa/eoa_upload.py",   title="Offer Upload"),
-            st.Page("src/views/eoa/eoa_settings.py", title="Configuration")
+            st.Page("src/views/eoa/upload_page.py",   title="Offer Upload"),
+            st.Page("src/views/eoa/settings_page.py", title="Configuration")
         ]
     }
 

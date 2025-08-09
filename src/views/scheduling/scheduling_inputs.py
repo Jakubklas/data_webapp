@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from src.services.inputs_processing import InputsProcessor
-from src.s3_utils import get_s3_object, save_to_s3
+from aws_utils.s3_utils import get_s3_object, save_to_s3
 from src.utils.utils import separate_text_input, confirm_dialog, overrides_widget
 from src.utils.css import overrides_widget_styling
-from src.config import *
+from config import *
 
 def Scheduling_Inputs():
     st.title("Scheduling Inputs")
