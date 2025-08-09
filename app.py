@@ -1,6 +1,6 @@
 import streamlit as st
 import config as cfg
-import src.utils.css as css
+import src.utils.general_utils.css as css
 def main():
     
     # Set page configuration

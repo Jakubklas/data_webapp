@@ -10,6 +10,7 @@ def stepfunction_invoke(command: str, arn: str) -> None:
     intensitve ECS/Lambda workflows. Example 'command' input:
     """
 
+    # Set up the client & invoke state-machine ARN
     commands = ["predict_churn", "match_offers"]
     if command in commands:
         payload = {
@@ -35,13 +36,12 @@ def stepfunction_invoke(command: str, arn: str) -> None:
             break
         time.sleep(5)
 
-    # 3. Act on the final status
+    # Stop on the final status
     if status == "SUCCEEDED":
         output = json.loads(desc["output"])
-        print("✅ Workflow succeeded, output:", output)
+        print("✅ Workflow succeeded, output:", output)    
     else:
         error = desc.get("cause", desc.get("error", "Unknown"))
         print(f"❌ Workflow failed ({status}):", error)
-
-
-# stepfunction_invoke(command="match_offers", arn = st_arn)
+    
+    return status

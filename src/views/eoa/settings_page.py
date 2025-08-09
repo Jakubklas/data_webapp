@@ -1,15 +1,17 @@
 import streamlit as st
 import pandas as pd
-import json
 from io import StringIO
 from datetime import datetime
+
 import config as cfg
-from src.utils.utils import *
 from src.utils.aws_utils.s3_utils import S3Handler
 from src.utils.aws_utils.lambda_utils import lambda_invoke
 from src.utils.aws_utils.auth import LocalAuth
 
-auth = LocalAuth(cfg.KEY_PATH, manual_auth=True)
+try:
+    auth = LocalAuth(cfg.KEY_PATH, manual_auth=True)
+except:
+    st.error(f"VPN Connection is necessary for this program to run as intended.")
 lmbd_client = auth.get_client("lambda")
 s3_client = auth.get_client("s3")
 

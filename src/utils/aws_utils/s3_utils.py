@@ -1,5 +1,4 @@
 import boto3
-from botocore.exceptions import ClientError
 import io
 import os
 import pandas as pd

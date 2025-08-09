@@ -1,16 +1,21 @@
 import streamlit as st
 import pandas as pd
 from datetime import timezone
-from config import *
-from aws_utils.s3_utils import save_to_s3, list_s3_objects
-from src.utils.css import overrides_widget_styling
+import config as cfg
+from src.utils.general_utils.css import overrides_widget_styling
 
-def process_sa(df):
+
+def preprocess_eoa_upload(df):
+    """
+    Checks the correct colmns are in place and
+    creates a mini file overview for user before
+    uploading to S3 for offer matching.
+    """
     report = {}
 
     # Verify Columns
     for col in df.columns:
-        if col not in sa_columns:
+        if col not in cfg.sa_columns:
             report["column_check"] = False
         else:
             report["column_check"] = True
@@ -20,8 +25,8 @@ def process_sa(df):
     report["stations"] = df["Station"].nunique()
     report["avg_duration"] = df["Duration"].mean()
 
-    return report
-    
+    return report 
+
 
 def separate_text_input(text, item_length=None):
     try:
