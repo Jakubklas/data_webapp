@@ -15,8 +15,8 @@ def main():
 
     pages = {
         "EXCLUSIVE OFFERS": [
-            st.Page("src/views/eoa/upload_page.py",   title="Offer Upload"),
-            st.Page("src/views/eoa/settings_page.py", title="Configuration")
+            st.Page("src/pages/eoa/upload_page.py",   title="Offer Upload"),
+            st.Page("src/pages/eoa/settings_page.py", title="Configuration")
         ]
     }
 

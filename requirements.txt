@@ -1,6 +1,7 @@
-pandas
-boto3
-numpy
-streamlit
-time
-datetime
+pandas==2.3.1
+boto3==1.40.6
+numpy==2.3.2
+streamlit==1.48.0
+pytz
+
+
