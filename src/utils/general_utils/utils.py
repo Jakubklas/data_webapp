@@ -5,7 +5,7 @@ import config as cfg
 from src.utils.general_utils.css import overrides_widget_styling
 
 
-def preprocess_eoa_upload(df):
+def verify_eoa_upload(df):
     """
     Checks the correct colmns are in place and
     creates a mini file overview for user before
@@ -16,14 +16,16 @@ def preprocess_eoa_upload(df):
     # Verify Columns
     for col in df.columns:
         if col not in cfg.sa_columns:
-            report["column_check"] = False
+            report["Column Check"] = False
         else:
-            report["column_check"] = True
+            report["Column Check"] = True
 
     # Count offers, stations, durations
-    report["offers"] = df.shape[0]
-    report["stations"] = df["Station"].nunique()
-    report["avg_duration"] = df["Duration"].mean()
+    report["Offers"] = df.shape[0]
+    report["Stations"] = df["Station"].nunique()
+    report["Cycles"] = "".join([c + " / " for c in df["Cycle"].unique()])[:-2]
+    report["Date Range"] = f"{df['OFD Date'].min().strftime("%y-%m-%d")} - {df['OFD Date'].max().strftime("%y-%m-%d")}"
+    report["Avg. Block Lenght"] = df["Duration"].mean()
 
     return report 
 

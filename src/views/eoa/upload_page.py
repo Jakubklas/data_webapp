@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import time
 
 import config as cfg
-from src.utils.general_utils.utils import preprocess_eoa_upload
+from src.utils.general_utils.utils import verify_eoa_upload
 from src.utils.aws_utils.auth import LocalAuth
 from src.utils.aws_utils.s3_utils import S3Handler
 from src.utils.aws_utils.sf_utils import stepfunction_invoke
@@ -17,12 +17,15 @@ except:
 
 def EOA_Upload_Page():
 
+    if "uploaded" not in st.session_state:
+        st.session_state.uploaded = False
     if "sf_client" not in st.session_state:
         st.session_state.sf_client = auth.get_client("stepfunctions")
     if "s3_client" not in st.session_state:
         st.session_state.s3_client = auth.get_client("s3")
     if "s3_resource" not in st.session_state:
         st.session_state.s3_resource = auth.get_resource("s3")
+    
 
     s3 = S3Handler(cfg.BUCKET, st.session_state.s3_client)
 
@@ -46,7 +49,7 @@ def EOA_Upload_Page():
 
         # File Processing and Metadata
         try:
-            report = preprocess_eoa_upload(df)
+            report = verify_eoa_upload(df)
             latest_upload = datetime.now().strftime("%A") + ", " + datetime.now().strftime("%H:%M")
             st.success(f"Last file uploaded: {latest_upload}")
 
@@ -73,6 +76,7 @@ def EOA_Upload_Page():
                         success = s3.save_to_s3(df, cfg.SA_OUTPUTS_KEY)
                         if success:
                             st.session_state.upload_time = datetime.now(timezone.utc)
+                            
                         else:
                             st.error("❌ Upload Failed.")
                             st.stop()
@@ -84,9 +88,11 @@ def EOA_Upload_Page():
                             st.error("There was a problem whilte dtistributing offers.")
                             st.stop()
                         else:
+                            st.session_state.uploaded = True
                             st.success("Matched DPs to available offers.")
 
-                    # Bulk download the S3 offers files
+                # Bulk download the S3 offers files
+                if st.session_state.uploaded:
                     st.info(f"🔄 Latest Offers available to download.")
                     if st.button("Download Optimized Offers"):
                         s3_res = S3Handler(cfg.BUCKET, st.session_state.s3_resource)
