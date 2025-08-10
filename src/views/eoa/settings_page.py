@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 from io import StringIO
 from datetime import datetime
+import pytz
 
 import config as cfg
 from src.utils.aws_utils.s3_utils import S3Handler
+from src.utils.aws_utils.dynamo_utils import Config, Exclusions
 from src.utils.aws_utils.lambda_utils import lambda_invoke
 from src.utils.aws_utils.auth import LocalAuth
 
@@ -13,11 +15,31 @@ try:
 except:
     st.error(f"VPN Connection is necessary for this program to run as intended.")
 lmbd_client = auth.get_client("lambda")
+dynamo_resource = auth.get_resource("dynamodb")
 s3_client = auth.get_client("s3")
 
 s3 = S3Handler(bucket=cfg.BUCKET, client=s3_client)
+ddb_cfg = Config(resource=dynamo_resource)
+
 
 def Settings_Page():
+
+    # Config State:
+    up_to_date = True
+    for var in ["offers_per_dp", "weekly_dp_targets", "risk_threshold", "timezone"]:    
+        if var not in st.session_state:
+            up_to_date = False
+    if not up_to_date:
+        try:
+            eoa_config = {item["config"]: item["value"] for item in ddb_cfg.get_config()}
+            st.session_state.offers_per_dp = int(eoa_config["offers_per_dp"])
+            st.session_state.weekly_dp_targets = int(eoa_config["weekly_dp_targets"])
+            st.session_state.risk_threshold = float(eoa_config["risk_threshold"])
+            st.session_state.timezone = pytz.timezone(eoa_config["timezone"])
+        except Exception as e:
+            st.error(f"Failed to fetch the current configuration due to : \n{e}")
+
+
     st.title("Settings")
 
     st.header("Targeting Configuration", divider="gray")
@@ -27,32 +49,24 @@ def Settings_Page():
 
     with col1:
         try:
-            command = {
-                "run": "get_config",
-                "input_data": ""
-            }
-            response = lambda_invoke(command=command, arn=cfg.LAMBDA_ARN, region=cfg.REGION, client=lmbd_client)
+            response = ddb_cfg.get_config()
             eoa_config = {item["config"]: item["value"] for item in response}
         except Exception as e:
             st.error(f"Failed to fetch the current configuration due to : \n{e}")
         
-        OFFERS_PER_DP = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=eoa_config["offers_per_dp"])
-        WEEKLY_DP_TARGETS = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=eoa_config["weekly_dp_targets"])
-        RISK_THRESHOLD = st.number_input("Minimum risk threshold", min_value=0.1, max_value=1.0, value=float(eoa_config["risk_threshold"]))
+        st.session_state.offers_per_dp = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=st.session_state.offers_per_dp)
+        st.session_state.weekly_dp_targets = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=st.session_state.weekly_dp_targets)
+        st.session_state.risk_threshold = st.number_input("Minimum risk threshold", min_value=0.1, max_value=1.0, value=st.session_state.risk_threshold)
 
         if st.button("Save Configuration"):
-            command = {
-                    "run": "index_config",
-                    "input_data": {
-                        "offers_per_dp": OFFERS_PER_DP,
-                        "risk_threshold": RISK_THRESHOLD,
-                        "weekly_dp_targets": WEEKLY_DP_TARGETS
-                    }
-                }
-            
             try:
+                input_data = {
+                    "offers_per_dp": st.session_state.offers_per_dp,
+                    "weekly_dp_targets": st.session_state.weekly_dp_targets,
+                    "risk_threshold": st.session_state.risk_threshold
+                }
                 
-                response = lambda_invoke(command=command, arn=cfg.LAMBDA_ARN, region=cfg.REGION, client=lmbd_client)
+                response = ddb_cfg.index_config(input_data)
                 if response["fail"]:
                     st.success(f"Success: {response["success"]}")
                     st.error(f"Errors: {response["fail"]}")
@@ -69,8 +83,8 @@ def Settings_Page():
         st.write("")
         st.write(
         f"""
-        Exclusive Offers will target each DP <b>maximum {WEEKLY_DP_TARGETS}</b> times per week
-        with  <b>maximum {OFFERS_PER_DP} offers</b> sent to each DP. DPs with <b>more than {int(RISK_THRESHOLD*100)}%</b>
+        Exclusive Offers will target each DP <b>maximum {st.session_state.weekly_dp_targets}</b> times per week
+        with  <b>maximum {st.session_state.offers_per_dp} offers</b> sent to each DP. DPs with <b>more than {int(st.session_state.risk_threshold*100)}%</b>
         probability of disengaging will be considered "at risk" and will be targetd with priority.
         """,
         unsafe_allow_html=True
@@ -87,13 +101,12 @@ def Settings_Page():
         )
     
     if uploaded_file:
-        providers = pd.read_csv(uploaded_file)["provider_id"].dropna().astype(str).to_list()
-        command = {
-            "run": "fully_exclude_providers",
-            "input_data": providers
-        }
+        if "ddb_excl" not in st.session_state:
+            st.session_state.ddb_excl = Exclusions(dynamo_resource, st.session_state.timezone)
+
         try:
-            response = lambda_invoke(command=command, arn=cfg.LAMBDA_ARN, region=cfg.REGION, client=lmbd_client)
+            providers = pd.read_csv(uploaded_file)["provider_id"].dropna().astype(str).to_list()
+            response = st.session_state.ddb_excl.fully_exclude_providers(providers)
             st.info(f"File uploaded. {response}")
         except Exception as e:
             st.error(f"Failed to upload provider exclusions due to:\n{e}")
@@ -126,11 +139,14 @@ def Settings_Page():
 
             with yes:
                 if st.button("Yes, wipe"):
+                    if "ddb_excl" not in st.session_state:
+                        st.session_state.ddb_excl = Exclusions(dynamo_resource, st.session_state.timezone)
+
                     # Perform the action
                     command = {
                         "run": "remove_all_exclusions"
                     }
-                    response = lambda_invoke(command=command, arn=cfg.LAMBDA_ARN, region=cfg.REGION, client=lmbd_client)
+                    response = st.session_state.ddb_excl.remove_all_exclusions()
                     st.success(f"Removed {response["success"]} excluded DPs.")
                     # Turn off confirm mode
                     st.session_state.confirm_wipe = False

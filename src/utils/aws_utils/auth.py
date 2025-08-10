@@ -53,7 +53,7 @@ class LocalAuth():
         else:
             self.get_keys()
             self.client = boto3.resource(
-                "s3",
+                service,
                 aws_access_key_id = self.access_key,
                 aws_secret_access_key = self.secret_key,
             )
