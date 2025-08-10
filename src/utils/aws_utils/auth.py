@@ -1,9 +1,4 @@
 import boto3
-import json
-from io import BytesIO
-import pandas as pd
-from config import *
-
 
 class LocalAuth():
 
@@ -22,7 +17,7 @@ class LocalAuth():
                 self.access_key = parts[1].split("\n")[1].strip()
                 self.secret_key = parts[2].strip()        
         except Exception as e:
-            print(f"ERROR: {e} \nVPN connection is required to authenticate.")
+            print(f"ERROR: {e} \n Please also ensure VPN connection.")
             raise
 
 

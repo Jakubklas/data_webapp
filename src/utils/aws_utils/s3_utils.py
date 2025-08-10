@@ -51,7 +51,7 @@ class S3Handler():
             raise
 
 
-    def bulk_download(self, prefix: str, dest: str, fmt: str = "csv"):
+    def bulk_download(self, prefix: str, dest: str, resource: boto3, fmt: str = "csv") -> None:
         """
         Downloads all objects within an S3 folder that
         match the specified format.
@@ -60,8 +60,7 @@ class S3Handler():
             prefix += "/"
 
         os.makedirs(dest, exist_ok=True)
-        s3 = boto3.resource("s3")
-        b = s3.Bucket(self.bucket)
+        b = resource.Bucket(self.bucket)
 
         for obj in b.objects.filter(Prefix=prefix):
             if obj.key.lower().endswith(fmt) and not obj.key.endswith("/"):

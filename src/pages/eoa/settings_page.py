@@ -5,24 +5,32 @@ from datetime import datetime
 import pytz
 
 import config as cfg
-from src.utils.aws_utils.s3_utils import S3Handler
 from src.utils.aws_utils.dynamo_utils import Config, Exclusions
-from src.utils.aws_utils.lambda_utils import lambda_invoke
 from src.utils.aws_utils.auth import LocalAuth
 
-try:
-    auth = LocalAuth(cfg.KEY_PATH, manual_auth=True)
-except:
-    st.error(f"VPN Connection is necessary for this program to run as intended.")
-lmbd_client = auth.get_client("lambda")
-dynamo_resource = auth.get_resource("dynamodb")
-s3_client = auth.get_client("s3")
+@st.cache_resource
+def get_auth():
+    return LocalAuth(cfg.KEY_PATH, manual_auth=True)
 
-s3 = S3Handler(bucket=cfg.BUCKET, client=s3_client)
-ddb_cfg = Config(resource=dynamo_resource)
+@st.cache_resource
+def get_clients():
+    auth = get_auth()
+    return {
+        "s3_client": auth.get_client("s3"),
+        "dynamo_resource": auth.get_resource("dynamodb")
+    }
 
 
 def Settings_Page():
+    # Authenticate w/ AWS
+    try:
+        clients = get_clients()
+    except Exception as e:
+        st.error("VPN connection is required to run this app.")
+        st.stop()
+    
+    ddb_cfg = Config(clients["dynamo_resource"])
+    ddb_excl = Exclusions(clients["dynamo_resource"], pytz.timezone(ddb_cfg.get_config("timezone")))
 
     # Config State:
     up_to_date = True
@@ -48,25 +56,19 @@ def Settings_Page():
     col1, col2 = st.columns([1,1])
 
     with col1:
-        try:
-            response = ddb_cfg.get_config()
-            eoa_config = {item["config"]: item["value"] for item in response}
-        except Exception as e:
-            st.error(f"Failed to fetch the current configuration due to : \n{e}")
-        
         st.session_state.offers_per_dp = st.number_input("Maximum offers per target", min_value=1, max_value=6, value=st.session_state.offers_per_dp)
         st.session_state.weekly_dp_targets = st.number_input("Maximum DP targets per week", min_value=1, max_value=4, value=st.session_state.weekly_dp_targets)
         st.session_state.risk_threshold = st.number_input("Minimum risk threshold", min_value=0.1, max_value=1.0, value=st.session_state.risk_threshold)
 
         if st.button("Save Configuration"):
             try:
-                input_data = {
-                    "offers_per_dp": st.session_state.offers_per_dp,
-                    "weekly_dp_targets": st.session_state.weekly_dp_targets,
-                    "risk_threshold": st.session_state.risk_threshold
-                }
-                
-                response = ddb_cfg.index_config(input_data)
+                with st.spinner("Saving configuration..."):
+                    input_data = {
+                        "offers_per_dp": st.session_state.offers_per_dp,
+                        "weekly_dp_targets": st.session_state.weekly_dp_targets,
+                        "risk_threshold": st.session_state.risk_threshold
+                    }
+                    response = ddb_cfg.index_config(input_data)
                 if response["fail"]:
                     st.success(f"Success: {response["success"]}")
                     st.error(f"Errors: {response["fail"]}")
@@ -76,11 +78,8 @@ def Settings_Page():
                 st.error(f"Problem saving the new settings due to: \n{e}")
 
     with col2:
-        st.write("")
-        st.write("")
-        st.write("")
-        st.write("")
-        st.write("")
+        st.container(height=50, border=False)
+        st.write("***Policy Preview:***")
         st.write(
         f"""
         Exclusive Offers will target each DP <b>maximum {st.session_state.weekly_dp_targets}</b> times per week
@@ -101,16 +100,13 @@ def Settings_Page():
         )
     
     if uploaded_file:
-        if "ddb_excl" not in st.session_state:
-            st.session_state.ddb_excl = Exclusions(dynamo_resource, st.session_state.timezone)
-
         try:
             providers = pd.read_csv(uploaded_file)["provider_id"].dropna().astype(str).to_list()
-            response = st.session_state.ddb_excl.fully_exclude_providers(providers)
+            response = ddb_excl.fully_exclude_providers(providers)
             st.info(f"File uploaded. {response}")
         except Exception as e:
             st.error(f"Failed to upload provider exclusions due to:\n{e}")
-
+            st.stop()
 
     buffer = StringIO()
     empty_df = pd.DataFrame(columns=["provider_id"])
@@ -139,14 +135,8 @@ def Settings_Page():
 
             with yes:
                 if st.button("Yes, wipe"):
-                    if "ddb_excl" not in st.session_state:
-                        st.session_state.ddb_excl = Exclusions(dynamo_resource, st.session_state.timezone)
-
                     # Perform the action
-                    command = {
-                        "run": "remove_all_exclusions"
-                    }
-                    response = st.session_state.ddb_excl.remove_all_exclusions()
+                    response = ddb_excl.remove_all_exclusions()
                     st.success(f"Removed {response["success"]} excluded DPs.")
                     # Turn off confirm mode
                     st.session_state.confirm_wipe = False

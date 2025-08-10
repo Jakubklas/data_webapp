@@ -1,33 +1,37 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timezone
-import time
 
 import config as cfg
 from src.utils.general_utils.utils import verify_eoa_upload
 from src.utils.aws_utils.auth import LocalAuth
 from src.utils.aws_utils.s3_utils import S3Handler
 from src.utils.aws_utils.sf_utils import stepfunction_invoke
-from src.utils.aws_utils.lambda_utils import lambda_invoke
 
-try:
-    auth = LocalAuth(cfg.KEY_PATH, manual_auth=True)
-except:
-    st.error(f"VPN Connection is necessary for this program to run as intended.")
+@st.cache_resource
+def get_auth():
+    return LocalAuth(cfg.KEY_PATH, manual_auth=True)
+
+@st.cache_resource
+def get_clients():
+    auth = get_auth()
+    return {
+        "sf_client": auth.get_client("stepfunctions"),
+        "s3_client": auth.get_client("s3"),
+        "s3_resource": auth.get_resource("s3"),
+    }
+
 
 def EOA_Upload_Page():
-
-    if "uploaded" not in st.session_state:
-        st.session_state.uploaded = False
-    if "sf_client" not in st.session_state:
-        st.session_state.sf_client = auth.get_client("stepfunctions")
-    if "s3_client" not in st.session_state:
-        st.session_state.s3_client = auth.get_client("s3")
-    if "s3_resource" not in st.session_state:
-        st.session_state.s3_resource = auth.get_resource("s3")
+    # Authenticate w/ AWS
+    try:
+        clients = get_clients()
+    except Exception as e:
+        st.error("VPN connection is required to run this app.")
+        st.stop()
     
-
-    s3 = S3Handler(cfg.BUCKET, st.session_state.s3_client)
+    s3 = S3Handler(cfg.BUCKET, clients["s3_client"])
+    s3_res = S3Handler(cfg.BUCKET, clients["s3_resource"])
 
     # Create headline
     st.title("Exclusive Offer Allocation")
@@ -38,7 +42,8 @@ def EOA_Upload_Page():
         type=["csv", "xlsx", "xls"],
         accept_multiple_files=False
     )
-    if uploaded_file:
+    
+    if uploaded_file is not None:
         try:
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file)
@@ -71,21 +76,24 @@ def EOA_Upload_Page():
         with col1:
             # SA Upload Button
             try:
+                if "uploaded" not in st.session_state:
+                        st.session_state.uploaded = False
+                        
                 if st.button("Upload & Distribute Offers"):
                     with st.spinner("Uploading...", show_time=True):
                         success = s3.save_to_s3(df, cfg.SA_OUTPUTS_KEY)
                         if success:
-                            st.session_state.upload_time = datetime.now(timezone.utc)
+                            st.session_state.upload_time = datetime.now()
                             
                         else:
                             st.error("❌ Upload Failed.")
                             st.stop()
 
                     # Step-Functions ECS Workflow invocation
-                    with st.spinner(text="Distributing these offers...", show_time=True):
-                        resposne = stepfunction_invoke("match_offers", cfg.SF_ARN)
-                        if resposne != "SUCCEEDED":
-                            st.error("There was a problem whilte dtistributing offers.")
+                    with st.spinner(text="Matching offers to providers...", show_time=True):
+                        response = stepfunction_invoke("match_offers", clients["sf_client"], cfg.SF_ARN)
+                        if response["status"] != "SUCCEEDED":
+                            st.error(f"Failed due to: {response["cause"]}\n{response["error"]}.")
                             st.stop()
                         else:
                             st.session_state.uploaded = True
@@ -95,8 +103,7 @@ def EOA_Upload_Page():
                 if st.session_state.uploaded:
                     st.info(f"🔄 Latest Offers available to download.")
                     if st.button("Download Optimized Offers"):
-                        s3_res = S3Handler(cfg.BUCKET, st.session_state.s3_resource)
-                        s3_res.bulk_download(cfg.OUTPUT_PREFIX, cfg.DOWNLOAD_PATH)
+                        s3_res.bulk_download(cfg.OUTPUT_PREFIX, cfg.DOWNLOAD_PATH, clients["s3_resource"])
                         st.success("✅ Download Successful..")
 
             except Exception as e:

@@ -1,16 +1,17 @@
 import boto3
+from typing import Any
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 class Config():
 
-    def __init__(self, resource):
+    def __init__(self, resource: boto3) -> None:
         self.dynamodb = resource
         self.table = self.dynamodb.Table("eoa-config")
 
 
-    def index_config(self, input_data):
+    def index_config(self, input_data: dict) -> dict[list]:
         """
         Adds or changes EOA config.
         """
@@ -64,12 +65,12 @@ class Config():
 
 class Exclusions():
 
-    def __init__(self, resource, timezone):
+    def __init__(self, resource: boto3, timezone: Any):
         self.dynamodb = resource
         self.table = self.dynamodb.Table("eoa-exclusions")
         self.timezone = timezone
 
-    def exclude_providers(self, provider_ids: list, permanent: bool = False) -> None:
+    def exclude_providers(self, provider_ids: list, permanent: bool = False) -> str:
         """
         Updates weekly targeting quota for DPs or add new
         DPs to DynamoDB table incl. the last update time.  
@@ -102,7 +103,7 @@ class Exclusions():
         return f"Increased DP targeting quota: {results}"
 
 
-    def fully_exclude_providers(self, provider_ids: list, permanent: bool = False) -> None:
+    def fully_exclude_providers(self, provider_ids: list, permanent: bool = False) -> str:
             """
             Updates weekly targeting quota for DPs or add new
             DPs to DynamoDB table incl. the last update time.  
@@ -134,7 +135,7 @@ class Exclusions():
             return f"Removed providers from this week's targeting: {results}"
 
 
-    def get_exclusions(self, targets_quota: int = 2, persistance: int = 5, erase_old: bool = True) -> list:
+    def get_exclusions(self, targets_quota: int = 2, persistance: int = 5, erase_old: bool = True) -> dict[list]:
         """
         Erases any old provider records and returns the
         current active list of excluded providers.
@@ -182,7 +183,7 @@ class Exclusions():
         return exclusions
 
 
-    def remove_all_exclusions(self, permanent: bool = False) -> None:
+    def remove_all_exclusions(self, permanent: bool = False) -> dict[list]:
         """
         Remove all non-permanent exclusion records.
         """
