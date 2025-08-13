@@ -17,12 +17,11 @@ def _ensure_user_config(install_root: Path) -> Path:
     base.mkdir(parents=True, exist_ok=True)
     dest = base / "config.toml"
     if not dest.exists():
-        # Try to find packaged default config file
         packaged_locations = [
-            install_root / "defaults" / "config.toml",  # Expected location (if it's a file)
-            install_root / "defaults" / "config.toml" / "config.toml",  # If defaults/config.toml is a directory
-            install_root / ".streamlit" / "config.toml",  # Alternative location
-            install_root / ".streamlit" / ".streamlit" / "config.toml",  # If .streamlit is doubled
+            install_root / "defaults" / "config.toml",
+            install_root / "defaults" / "config.toml" / "config.toml",
+            install_root / ".streamlit" / "config.toml",
+            install_root / ".streamlit" / ".streamlit" / "config.toml",
         ]
         
         config_copied = False
@@ -36,7 +35,6 @@ def _ensure_user_config(install_root: Path) -> Path:
                     continue
         
         if not config_copied:
-            # Fallback: write a minimal config
             dest.write_text(
                 "[global]\n"
                 "developmentMode = false\n\n"
@@ -49,20 +47,16 @@ def _ensure_user_config(install_root: Path) -> Path:
 
 
 def main():
-    # For pynsist installations, the app files are in the same directory as the executable
-    # For regular Python, they would be in parent.parent, but pynsist puts them alongside
     exe_dir = Path(sys.executable).resolve().parent
     
-    # Try multiple possible locations for app.py to find correct install root
     possible_roots = [
-        exe_dir,                    # Same directory as Python executable
-        exe_dir.parent,             # One level up from Python executable  
-        exe_dir.parent.parent,      # Two levels up (traditional structure)
+        exe_dir,
+        exe_dir.parent,
+        exe_dir.parent.parent,
     ]
     
     install_root = None
     for root in possible_roots:
-        # Check for app.py and src directory (handling both normal and doubled directory structure)
         app_exists = (root / "app.py").exists()
         src_exists = (root / "src").exists() or (root / "src" / "src").exists()
         
@@ -71,7 +65,6 @@ def main():
             break
     
     if install_root is None:
-        # Emergency fallback - use exe_dir even if app.py doesn't exist there
         install_root = exe_dir
     
     os.chdir(install_root)
@@ -81,7 +74,6 @@ def main():
     print(f"App path: {install_root / 'app.py'}")
     print(f"Command: {[str(py), '-m', 'streamlit', 'run', str(install_root / 'app.py')]}")
 
-    # Logs
     log_dir = Path(os.getenv("LOCALAPPDATA", str(install_root))) / "FlexController" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "streamlit.log"
@@ -94,7 +86,6 @@ def main():
     env["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
     env["STREAMLIT_SERVER_HEADLESS"] = "true"
     env["STREAMLIT_SERVER_PORT"] = "8502"
-    # Also pass flags (highest precedence) to guarantee settings
     cmd = [
         str(py), "-m", "streamlit", "run", str(install_root / "app.py"),
         "--global.developmentMode=false",

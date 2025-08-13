@@ -23,7 +23,6 @@ def get_clients():
 
 
 def EOA_Upload_Page():
-    # Authenticate w/ AWS
     try:
         clients = get_clients()
     except Exception as e:
@@ -33,10 +32,7 @@ def EOA_Upload_Page():
     s3 = S3Handler(cfg.BUCKET, clients["s3_client"])
     s3_res = S3Handler(cfg.BUCKET, clients["s3_resource"])
 
-    # Create headline
     st.title("Exclusive Offer Allocation")
-    
-    # File Upload Section
     uploaded_file = st.file_uploader(
         "Upload a CSV or Excel file",
         type=["csv", "xlsx", "xls"],
@@ -52,7 +48,6 @@ def EOA_Upload_Page():
         except Exception as e:
             st.error(f"Error reading file: {e}")
 
-        # File Processing and Metadata
         try:
             report = verify_eoa_upload(df)
             latest_upload = datetime.now().strftime("%A") + ", " + datetime.now().strftime("%H:%M")
@@ -69,12 +64,10 @@ def EOA_Upload_Page():
             st.error(f"Error processing file: {e}")
             st.stop()
 
-        # Buttons Section
         st.divider()
         col1, _, _= st.columns(3)
 
         with col1:
-            # SA Upload Button
             try:
                 if "uploaded" not in st.session_state:
                         st.session_state.uploaded = False
@@ -99,7 +92,6 @@ def EOA_Upload_Page():
                             st.session_state.uploaded = True
                             st.success("Matched DPs to available offers.")
 
-                # Bulk download the S3 offers files
                 if st.session_state.uploaded:
                     st.info("Latest Offers available to download.")
                     if st.button("Download Optimized Offers"):

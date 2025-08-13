@@ -2,7 +2,6 @@ import logging
 from functools import wraps
 from datetime import datetime
 
-# ─── LOGGER CONFIGURATION ──────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
@@ -11,7 +10,6 @@ handler.setFormatter(logging.Formatter(
 ))
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
-# ────────────────────────────────────────────────────────────────────────────────
 
 def log_msg(func):
     @wraps(func)

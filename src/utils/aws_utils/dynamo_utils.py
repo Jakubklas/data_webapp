@@ -18,8 +18,7 @@ class Config():
         results = {"success": [], "fail": []}
         items = []
 
-        # Prepping the data to match table schema
-        for k, v in input_data.items():
+                for k, v in input_data.items():
             if isinstance(v, float):
                 v = Decimal(str(v))
             items.append({
@@ -27,8 +26,7 @@ class Config():
                     "value": v
                 })
         
-        # Batch-loading to table
-        with self.table.batch_writer() as batch:
+                with self.table.batch_writer() as batch:
             for item in items:
                 try:
                     batch.put_item(Item=item)
@@ -47,8 +45,7 @@ class Config():
         """
         Fetches the current specified config
         """
-        # If no config specified, return all of it
-        if not config_name:
+                if not config_name:
             response = self.table.scan()["Items"] 
             return response
         else:
@@ -78,8 +75,7 @@ class Exclusions():
         results = {"success":0, "fail":0}
         current_date = datetime.now(self.timezone).strftime("%Y-%m-%d")
 
-        # Updating existing records in the table
-        for provider_id in provider_ids:
+                for provider_id in provider_ids:
             try:
                 response = self.table.update_item(
                     Key={
@@ -111,8 +107,7 @@ class Exclusions():
             results = {"success":0, "fail":0}
             current_date = datetime.now(self.timezone).strftime("%Y-%m-%d")
 
-            # Updating existing records in the table
-            for provider_id in provider_ids:
+                        for provider_id in provider_ids:
                 try:
                     response = self.table.update_item(
                         Key={
@@ -189,8 +184,7 @@ class Exclusions():
         """
         results = {"success":0, "fail":0}
 
-        # Create batches of data
-        response = self.table.scan(
+                response = self.table.scan(
             FilterExpression="permanent = :state",
             ExpressionAttributeValues={
                 ":state": permanent 
@@ -198,12 +192,10 @@ class Exclusions():
             ProjectionExpression="provider_id"
         )
 
-        # Deduplicated list of provider ids
-        items = list(set([item["provider_id"] for item in response.get("Items", [])]))
+                items = list(set([item["provider_id"] for item in response.get("Items", [])]))
         print(items[:15])
 
-        # Updating existing records in the table
-        batch_size = 25
+                batch_size = 25
         for i in range(0, len(items), batch_size):
             batch = items[i:i+batch_size]
             try:

@@ -22,7 +22,6 @@ def get_clients():
 
 
 def Settings_Page():
-    # Authenticate w/ AWS
     try:
         clients = get_clients()
     except Exception as e:
@@ -32,7 +31,6 @@ def Settings_Page():
     ddb_cfg = Config(clients["dynamo_resource"])
     ddb_excl = Exclusions(clients["dynamo_resource"], pytz.timezone(ddb_cfg.get_config("timezone")))
 
-    # Config State:
     up_to_date = True
     for var in ["offers_per_dp", "weekly_dp_targets", "risk_threshold", "timezone"]:    
         if var not in st.session_state:
@@ -136,15 +134,12 @@ def Settings_Page():
             with yes:
                 if st.button("Yes, wipe"):
                     with st.spinner("Removing exclusions..."):
-                        # Perform the action
                         response = ddb_excl.remove_all_exclusions()
                     st.success(f"Removed {response["success"]} excluded DPs.")
-                    # Turn off confirm mode
                     st.session_state.confirm_wipe = False
 
             with no:
                 if st.button("No, cancel"):
-                    # Just exit confirm mode
                     st.session_state.confirm_wipe = False
 
 

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(\"build-venv\\Scripts\\pynsist.exe\" installer.cfg)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
