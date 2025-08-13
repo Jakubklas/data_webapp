@@ -17,11 +17,26 @@ def _ensure_user_config(install_root: Path) -> Path:
     base.mkdir(parents=True, exist_ok=True)
     dest = base / "config.toml"
     if not dest.exists():
-        # copy packaged default if present, else write a minimal one
-        packaged = install_root / "defaults" / "config.toml"
-        if packaged.exists():
-            shutil.copy2(packaged, dest)
-        else:
+        # Try to find packaged default config file
+        packaged_locations = [
+            install_root / "defaults" / "config.toml",  # Expected location (if it's a file)
+            install_root / "defaults" / "config.toml" / "config.toml",  # If defaults/config.toml is a directory
+            install_root / ".streamlit" / "config.toml",  # Alternative location
+            install_root / ".streamlit" / ".streamlit" / "config.toml",  # If .streamlit is doubled
+        ]
+        
+        config_copied = False
+        for packaged in packaged_locations:
+            if packaged.exists() and packaged.is_file():
+                try:
+                    shutil.copy2(packaged, dest)
+                    config_copied = True
+                    break
+                except (OSError, PermissionError):
+                    continue
+        
+        if not config_copied:
+            # Fallback: write a minimal config
             dest.write_text(
                 "[global]\n"
                 "developmentMode = false\n\n"
@@ -32,11 +47,36 @@ def _ensure_user_config(install_root: Path) -> Path:
             )
     return dest
 
+
 def main():
-    install_root = Path(sys.executable).resolve().parent.parent
+    # For pynsist installations, the app files are in the same directory as the executable
+    # For regular Python, they would be in parent.parent, but pynsist puts them alongside
+    exe_dir = Path(sys.executable).resolve().parent
+    
+    # Try multiple possible locations for app.py to find correct install root
+    possible_roots = [
+        exe_dir,                    # Same directory as Python executable
+        exe_dir.parent,             # One level up from Python executable  
+        exe_dir.parent.parent,      # Two levels up (traditional structure)
+    ]
+    
+    install_root = None
+    for root in possible_roots:
+        # Check for app.py and src directory (handling both normal and doubled directory structure)
+        app_exists = (root / "app.py").exists()
+        src_exists = (root / "src").exists() or (root / "src" / "src").exists()
+        
+        if app_exists and src_exists:
+            install_root = root
+            break
+    
+    if install_root is None:
+        # Emergency fallback - use exe_dir even if app.py doesn't exist there
+        install_root = exe_dir
+    
     os.chdir(install_root)
 
-    py = Path(sys.executable).with_name("python.exe")
+    py = Path(sys.executable)
     print(f"Python executable: {py}")
     print(f"App path: {install_root / 'app.py'}")
     print(f"Command: {[str(py), '-m', 'streamlit', 'run', str(install_root / 'app.py')]}")
@@ -51,8 +91,6 @@ def main():
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
     env["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-
-    env["STREAMLIT_CONFIG_FILE"] = str(user_cfg)
     env["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
     env["STREAMLIT_SERVER_HEADLESS"] = "true"
     env["STREAMLIT_SERVER_PORT"] = "8502"
@@ -64,6 +102,18 @@ def main():
     ]
 
     with open(log_file, "w", encoding="utf-8") as log:
+        log.write(f"Starting Streamlit with command: {cmd}\n")
+        log.write(f"Working directory: {install_root}\n")
+        log.write(f"Python path: {py}\n")
+        log.write(f"exe_dir: {exe_dir}\n")
+        log.write(f"Config file: {user_cfg}\n")
+        log.write(f"App exists: {(install_root / 'app.py').exists()}\n")
+        log.write(f"src directory exists: {(install_root / 'src').exists()}\n")
+        log.write(f"upload_page exists: {(install_root / 'src/pages/eoa/upload_page.py').exists()}\n")
+        if (install_root / 'src').exists():
+            log.write(f"src directory contents: {os.listdir(install_root / 'src')}\n")
+        log.write(f"install_root contents: {list(install_root.iterdir())}\n")
+        log.flush()
         try:
             subprocess.Popen(
                 cmd, cwd=str(install_root), env=env,
@@ -71,6 +121,7 @@ def main():
             )
         except Exception as e:
             log.write(f"Failed to start subprocess: {e}\n")
+            log.flush()
 
     if _wait("127.0.0.1", 8502, t=40):
         webbrowser.open("http://localhost:8502")

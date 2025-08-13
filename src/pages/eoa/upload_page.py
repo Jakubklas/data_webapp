@@ -86,7 +86,7 @@ def EOA_Upload_Page():
                             st.session_state.upload_time = datetime.now()
                             
                         else:
-                            st.error("❌ Upload Failed.")
+                            st.error("Upload Failed.")
                             st.stop()
 
                     # Step-Functions ECS Workflow invocation
@@ -101,10 +101,10 @@ def EOA_Upload_Page():
 
                 # Bulk download the S3 offers files
                 if st.session_state.uploaded:
-                    st.info(f"🔄 Latest Offers available to download.")
+                    st.info("Latest Offers available to download.")
                     if st.button("Download Optimized Offers"):
                         s3_res.bulk_download(cfg.OUTPUT_PREFIX, cfg.DOWNLOAD_PATH, clients["s3_resource"])
-                        st.success("✅ Download Successful..")
+                        st.success("Download Successful!")
 
             except Exception as e:
                 st.error(f"Section Error: {e}")

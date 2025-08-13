@@ -5,8 +5,8 @@ import os
 STREAMLIT CONFIG
 =======================================================================================================
 """
-title = "Flex Scheduling Central"
-page_icon = r"C:\Users\jklas\Downloads\icon.ico"
+title = "Flex Conroller"
+page_icon = "icon.ico"
 latest_upload = None
 
 """

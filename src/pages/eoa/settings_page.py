@@ -126,17 +126,18 @@ def Settings_Page():
         st.session_state.confirm_wipe = False
 
     with col1:
-        if st.button("Wipe this week’s exclusions"):
+        if st.button("Wipe this week's exclusions"):
             st.session_state.confirm_wipe = True
 
         if st.session_state.confirm_wipe:
-            st.info("⚠️ Are you sure? This will erase the offers memory for this week, causing us to target some DPs more times than the current configured maximum.")
+            st.info("WARNING: Are you sure? This will erase the offers memory for this week, causing us to target some DPs more times than the current configured maximum.")
             yes, no = st.columns(2)
 
             with yes:
                 if st.button("Yes, wipe"):
-                    # Perform the action
-                    response = ddb_excl.remove_all_exclusions()
+                    with st.spinner("Removing exclusions..."):
+                        # Perform the action
+                        response = ddb_excl.remove_all_exclusions()
                     st.success(f"Removed {response["success"]} excluded DPs.")
                     # Turn off confirm mode
                     st.session_state.confirm_wipe = False
