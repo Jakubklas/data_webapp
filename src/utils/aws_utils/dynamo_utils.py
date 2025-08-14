@@ -18,7 +18,7 @@ class Config():
         results = {"success": [], "fail": []}
         items = []
 
-                for k, v in input_data.items():
+        for k, v in input_data.items():
             if isinstance(v, float):
                 v = Decimal(str(v))
             items.append({
@@ -26,7 +26,7 @@ class Config():
                     "value": v
                 })
         
-                with self.table.batch_writer() as batch:
+        with self.table.batch_writer() as batch:
             for item in items:
                 try:
                     batch.put_item(Item=item)
@@ -45,7 +45,7 @@ class Config():
         """
         Fetches the current specified config
         """
-                if not config_name:
+        if not config_name:
             response = self.table.scan()["Items"] 
             return response
         else:
@@ -75,7 +75,7 @@ class Exclusions():
         results = {"success":0, "fail":0}
         current_date = datetime.now(self.timezone).strftime("%Y-%m-%d")
 
-                for provider_id in provider_ids:
+        for provider_id in provider_ids:
             try:
                 response = self.table.update_item(
                     Key={
@@ -100,34 +100,34 @@ class Exclusions():
 
 
     def fully_exclude_providers(self, provider_ids: list, permanent: bool = False) -> str:
-            """
-            Updates weekly targeting quota for DPs or add new
-            DPs to DynamoDB table incl. the last update time.  
-            """
-            results = {"success":0, "fail":0}
-            current_date = datetime.now(self.timezone).strftime("%Y-%m-%d")
+        """
+        Updates weekly targeting quota for DPs or add new
+        DPs to DynamoDB table incl. the last update time.  
+        """
+        results = {"success":0, "fail":0}
+        current_date = datetime.now(self.timezone).strftime("%Y-%m-%d")
 
-                        for provider_id in provider_ids:
-                try:
-                    response = self.table.update_item(
-                        Key={
-                            "provider_id": provider_id
-                        },
-                        UpdateExpression="SET num_targeted = if_not_exists(num_targeted, :inf) + :inf, last_saved = :date, permanent = :state",
-                        ExpressionAttributeValues={
-                            ":inf": 99,
-                            ":date": current_date,
-                            ":state": permanent
-                        },
-                        ReturnValues="UPDATED_NEW"
-                    )
-                    results["success"] += 1
+        for provider_id in provider_ids:
+            try:
+                response = self.table.update_item(
+                    Key={
+                        "provider_id": provider_id
+                    },
+                    UpdateExpression="SET num_targeted = if_not_exists(num_targeted, :inf) + :inf, last_saved = :date, permanent = :state",
+                    ExpressionAttributeValues={
+                        ":inf": 99,
+                        ":date": current_date,
+                        ":state": permanent
+                    },
+                    ReturnValues="UPDATED_NEW"
+                )
+                results["success"] += 1
 
-                except Exception as e:
-                    results["fail"] += 1
-                    print(e)
+            except Exception as e:
+                results["fail"] += 1
+                print(e)
 
-            return f"Removed providers from this week's targeting: {results}"
+        return f"Removed providers from this week's targeting: {results}"
 
 
     def get_exclusions(self, targets_quota: int = 2, persistance: int = 5, erase_old: bool = True) -> dict[list]:
@@ -184,7 +184,7 @@ class Exclusions():
         """
         results = {"success":0, "fail":0}
 
-                response = self.table.scan(
+        response = self.table.scan(
             FilterExpression="permanent = :state",
             ExpressionAttributeValues={
                 ":state": permanent 
@@ -192,10 +192,10 @@ class Exclusions():
             ProjectionExpression="provider_id"
         )
 
-                items = list(set([item["provider_id"] for item in response.get("Items", [])]))
+        items = list(set([item["provider_id"] for item in response.get("Items", [])]))
         print(items[:15])
 
-                batch_size = 25
+        batch_size = 25
         for i in range(0, len(items), batch_size):
             batch = items[i:i+batch_size]
             try:

@@ -30,7 +30,7 @@ class S3Handler():
                 latest_file = sorted(contents, key=lambda x: x['LastModified'], reverse=True)[0]
                 key = latest_file['Key']
                 
-                                if key.endswith('/'):
+                if key.endswith('/'):
                     raise ValueError(f"No files found in directory: {key}")
                     
                 obj = self.client.get_object(Bucket=self.bucket, Key=key)
@@ -103,19 +103,19 @@ class S3Handler():
 
         results = {"success": [], "fail": []}
         for obj in objects:
-                        source_key = obj["Key"]
+            source_key = obj["Key"]
             new_key = source_key.replace(old_folder, new_folder)
             print(f"Moving {source_key} → {new_key}")
 
             try:
-                                self.client.copy_object(
+                self.client.copy_object(
                     Bucket=self.bucket,
                     CopySource={"Bucket": self.bucket, "Key": source_key},
                     Key=new_key
                 )
                 
 
-                                self.client.delete_object(
+                self.client.delete_object(
                     Bucket=self.bucket,
                     Key=source_key
                 )
