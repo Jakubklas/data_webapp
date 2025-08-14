@@ -70,7 +70,7 @@ def EOA_Upload_Page():
         with col1:
             try:
                 if "uploaded" not in st.session_state:
-                        st.session_state.uploaded = False
+                    st.session_state.uploaded = False
                         
                 if st.button("Upload & Distribute Offers"):
                     with st.spinner("Uploading...", show_time=True):
@@ -90,7 +90,7 @@ def EOA_Upload_Page():
                             st.stop()
                         else:
                             st.session_state.uploaded = True
-                            st.success("Matched DPs to available offers.")
+
 
                 if st.session_state.uploaded:
                     st.info("Latest Offers available to download.")

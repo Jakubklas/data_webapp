@@ -13,13 +13,13 @@ def verify_eoa_upload(df):
     """
     report = {}
 
-        for col in df.columns:
+    for col in df.columns:
         if col not in cfg.sa_columns:
             report["Column Check"] = False
         else:
             report["Column Check"] = True
 
-        report["Offers"] = df.shape[0]
+    report["Offers"] = df.shape[0]
     report["Stations"] = df["Station"].nunique()
     report["Cycles"] = "".join([c + " / " for c in df["Cycle"].unique()])[:-2]
     report["Date Range"] = f"{df['OFD Date'].min().strftime("%y-%m-%d")} - {df['OFD Date'].max().strftime("%y-%m-%d")}"
@@ -79,15 +79,15 @@ def overrides_widget(overrides_df: pd.DataFrame):
     col1, col2 = st.columns([9,1])
 
     for idx, row in overrides_df.iterrows():
-                title = f"**{row['day']}, W{row['week']}   /   {row['ofd_date']}   /   {row['station']}   /   {row['cycle']}**"
+        title = f"**{row['day']}, W{row['week']}   /   {row['ofd_date']}   /   {row['station']}   /   {row['cycle']}**"
 
         with st.container():
             with col1:
-                                with st.expander(title, expanded=False):
+                with st.expander(title, expanded=False):
                     cols = st.columns([1, 0.1, 1, 0.1, 1])
                     cols[0].write(f"**Value:** {row['value']}")
                     cols[4].write(f"**Station:** {row['station']}")
-                                        leftover = [c for c in overrides_df.columns if c not in ["day","week","ofd_date","station","cycle","value","wave_demand"]]
+                    leftover = [c for c in overrides_df.columns if c not in ["day","week","ofd_date","station","cycle","value","wave_demand"]]
                     for key in leftover:
                         st.write(f"**{key}:** {row[key]}")
             with col2:

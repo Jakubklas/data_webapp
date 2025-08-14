@@ -10,7 +10,7 @@ def stepfunction_invoke(command: str, client: boto3, arn: str) -> dict[str]:
     intensitve ECS/Lambda workflows. Example 'command' input:
     """
 
-        commands = ["predict_churn", "match_offers"]
+    commands = ["predict_churn", "match_offers"]
     if command in commands:
         payload = {
             "run": command
@@ -25,7 +25,7 @@ def stepfunction_invoke(command: str, client: boto3, arn: str) -> dict[str]:
         input = json.dumps(payload)
     )
 
-        while True:
+    while True:
         desc = client.describe_execution(executionArn=response["executionArn"])
         print("Current status:", desc["status"])
         if desc["status"] != "RUNNING":
@@ -33,10 +33,10 @@ def stepfunction_invoke(command: str, client: boto3, arn: str) -> dict[str]:
         time.sleep(5)
 
         if desc["status"] == "SUCCEEDED":
-        output = json.loads(desc["output"])
-        print("✅ Workflow succeeded, output:", output)    
-    else:
-        error = desc.get("cause", desc.get("error", "Unknown"))
-        print(f"❌ Workflow failed ({desc["status"]}):", error)
+            output = json.loads(desc["output"])
+            print("SUCCESS: Workflow succeeded, output:", output)    
+        else:
+            error = desc.get("cause", desc.get("error", "Unknown"))
+            print(f"ERROR: Workflow failed ({desc["status"]}):", error)
     
     return desc

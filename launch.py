@@ -86,6 +86,8 @@ def main():
     env["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
     env["STREAMLIT_SERVER_HEADLESS"] = "true"
     env["STREAMLIT_SERVER_PORT"] = "8502"
+    env["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+    env["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
     cmd = [
         str(py), "-m", "streamlit", "run", str(install_root / "app.py"),
         "--global.developmentMode=false",
