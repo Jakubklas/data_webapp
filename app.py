@@ -10,13 +10,13 @@ def find_src_path():
     current_dir = Path(os.getcwd())
     
     possible_paths = [
-        "src/pages/eoa/upload_page.py",
-        "src/src/pages/eoa/upload_page.py",
+        "pkgs/src/pages/eoa",
+        "src/pages/eoa"
     ]
     
     for path in possible_paths:
         if (current_dir / path).exists():
-            return path.replace("/upload_page.py", "").replace("\\upload_page.py", "")
+            return path
     
     return "src/pages/eoa"
 
