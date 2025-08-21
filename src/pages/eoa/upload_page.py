@@ -26,7 +26,7 @@ def EOA_Upload_Page():
     try:
         clients = get_clients()
     except Exception as e:
-        st.error("VPN connection is required to run this app.")
+        st.error(f"Authentication failed: {str(e)}. Please ensure your VPN is on.")
         st.stop()
     
     s3 = S3Handler(cfg.BUCKET, clients["s3_client"])

@@ -17,8 +17,7 @@ class LocalAuth():
                 self.access_key = parts[1].split("\n")[1].strip()
                 self.secret_key = parts[2].strip()        
         except Exception as e:
-            print(f"ERROR: {e} \n Please also ensure VPN connection.")
-            raise
+            return f"ERROR: {str(e)}"
 
 
     def get_client(self, service: str):

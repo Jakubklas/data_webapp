@@ -25,7 +25,7 @@ def Settings_Page():
     try:
         clients = get_clients()
     except Exception as e:
-        st.error("VPN connection is required to run this app.")
+        st.error(f"Authentication failed: {str(e)}. Please ensure your VPN is on.")
         st.stop()
     
     ddb_cfg = Config(clients["dynamo_resource"])
