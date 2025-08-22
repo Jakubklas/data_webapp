@@ -25,7 +25,7 @@ SF_ARN = "arn:aws:states:us-east-1:533267382787:stateMachine:exclusive-offer-all
 LAMBDA_ARN = "arn:aws:lambda:us-east-1:533267382787:function:eoa-dynamo-control"
 REGION = "us-east-1"
 DOWNLOAD_PATH = os.path.join(os.path.expanduser('~'), 'Downloads')
-KEY_PATH = r"\\ant\dept-eu\Amazon-Flex-Europe\Data\AWS\flex-programatic-access_accessKeys.csv"
+KEY_PATH = r"\\ant\dept-eu\TBA\UK\Business Analyses\CentralOPS\Scheduling\UK\FlexData\Flex_UK_AWS\flex-programatic-access_accessKeys.csv"
 
 """
 =======================================================================================================
